@@ -1,165 +1,98 @@
-# Redress Analyzer – Project Specification
+# Redress Analyzer � Project Specification
 
 ## 1. Purpose
 
-The Redress Analyzer is a Streamlit-based internal tool that analyzes how many days pass between the **official mailing date** of a magazine shipment and the **redress capture date** (the date when a mailing is marked as undeliverable by the provider).
+Internal Streamlit tool that analyzes how many days pass between the **official mailing date** of a campaign and the **redress capture date** (undeliverable event). It answers:
 
-Business question:
+> How long do we wait after Day 0 until X% of all redresses have arrived, so we can clean the next mailing list?
 
-> **How long do we need to wait (after the official mailing date) until X% (e.g. 95%) of all redresses have arrived, so we can safely generate the next mailing list?**
-
-This analysis prevents costs caused by sending the next magazine to addresses that are already known to be undeliverable.
-
-The tool is fully in English because non-German-speaking colleagues will use it.
-
+The UI stays in English for wider team usage.
 
 ## 2. Minimal Data Model (Privacy Compliant)
 
-Each Excel file must contain only **two columns** starting at **row 4**:
+Each Excel file contains only two columns starting at header row 4:
 
 | GRUND_UNZUSTELLBARKEIT | REDRESSENERFASSUNG_DATUM |
 |------------------------|--------------------------|
 | Unknown at address     | 2025-03-18               |
 | Moved / new address    | 2025-03-19               |
-| ...                    | ...                      |
 
-All personal or sensitive fields (addresses, ZIP, city, IDs, etc.) are removed.
+No personal data (addresses, IDs, ZIP) is present.
 
-### Mandatory metadata at the top:
+### Mandatory metadata
 
-Row 1 must contain:
+Row 1:
 
-| A1                      | B1          |
-|-------------------------|-------------|
-| OFFICIAL_MAILING_DATE   | 2025-03-15  |
+| A1                    | B1         |
+|-----------------------|------------|
+| OFFICIAL_MAILING_DATE | 2025-03-15 |
 
-- `A1 = OFFICIAL_MAILING_DATE` (literal string)
-- `B1 = official mailing date` (Excel date or ISO format)
-
-This defines **Day 0** for delta calculations.
-
-Row 2–3 can be blank or unused.
-
+- `A1` must literally be `OFFICIAL_MAILING_DATE`
+- `B1` contains the Day 0 date (Excel or ISO)
+- Rows 2�3 can be blank
 
 ## 3. File Naming Convention
 
-Files in the `/data` folder must follow:
-
 ```
-
-{MagazineName}_{YYY-MM}.xlsx
-
+{CampaignName}_{YYYY-MM}.xlsx
 ```
 
 Examples:
 
-```
+- `Magazin_043_2025-01.xlsx`
+- `Magazin_044_2025-03.xlsx`
+- `Must_Haves_2024-05.xlsx`
 
-Magazin_043_2025-01.xlsx
-Magazin_044_2025-03.xlsx
-Must_Haves_2024-05.xlsx
+The suffix is used for chronological sorting (latest first).
 
-```
+## 4. Features
 
-### Why this convention?
+- **Single mailing view**
+  - File selection (radio), ordered by date suffix
+  - Reads Day 0 from A1/B1 (manual fallback if missing)
+  - Optional filter by undeliverable reason
+  - Optional exclusion of negative deltas
+  - Distribution table (expander), summary stats (expander)
+  - Charts: frequency and cumulative coverage
+  - KPIs: median, 95th, 99th percentile
+  - Business questions: days for X% coverage; coverage after N days
+  - Textual summary with recommendation
 
-- Ensures correct chronological sorting
-- Clear campaign identification
-- Works automatically in the Streamlit dropdown
+- **All mailings view**
+  - Loads all Excel files and aggregates them
+  - Filters: reason, exclude negatives, weighting choice
+    - Weighting: by records (default) or average of campaign percentiles (shown as caption)
+  - KPIs: median/95th/99th across all filtered data
+  - Charts: frequency, cumulative coverage, mailing comparison (median)
+  - Tables: distribution, summary stats, per-mailing summary (median/p95/p99, counts, dates)
+  - Business questions: days for X% coverage; coverage after N days across all mailings
 
-
-## 4. How the App Works (MVP)
-
-### Step 1 — User selects a file
-- Streamlit lists all `.xlsx` files in `data/`
-- Example UI:  
-  `Select a mailing file: [Magazin_043_2025-01.xlsx]`
-
-### Step 2 — The app extracts metadata
-- Reads `A1` → must equal `"OFFICIAL_MAILING_DATE"`
-- Reads `B1` → date for baseline
-
-### Step 3 — The app loads the table
-- Reads the data starting at header row = 4 (`header=3` in pandas)
-- Required columns:
-  - `GRUND_UNZUSTELLBARKEIT`
-  - `REDRESSENERFASSUNG_DATUM`
-
-### Step 4 — Compute delta days
-```
-
-delta_days = REDRESSENERFASSUNG_DATUM - OFFICIAL_MAILING_DATE
+## 5. Folder Structure
 
 ```
-
-### Step 5 — Output statistics
-The app shows:
-
-- Table: distribution of delta days
-- Table: cumulative percentage
-- Percentiles (50%, 90%, 95%, 99%)
-- Bar chart (frequency)
-- Line chart (cumulative)
-- Two interactive controls:
-  - “How long to reach X% coverage?”
-  - “What coverage if we wait N days?”
-- Summary block with recommendation text
-
-
-## 5. Future Extensions (Phase 2)
-
-- Filter by reason (Grund)
-- Per-reason delta analysis
-- Combine multiple files for a yearly view
-- Export CSV or PDF summary
-- Optional: Auto-detect column positions
-
-
-## 6. Folder Structure
-
-```
-
 redress-analyzer/
-│
-├─ app/
-│  └─ redress_app.py
-│
-├─ data/
-│  ├─ Magazin_043_2025-01.xlsx
-│  ├─ Magazin_044_2025-03.xlsx
-│  ├─ Must_Haves_2024-05.xlsx
-│  └─ ...
-│
-├─ docs/
-│  └─ PROJECT.md
-│
-├─ requirements.txt
-└─ README.md
-
++- app/
+�  +- redress_analyzer_app.py
++- data/
+�  +- Magazin_043_2025-01.xlsx
+�  +- Must_Haves_2024-05.xlsx
+�  +- ...
++- docs/
+�  +- PROJECT.md
++- requirements.txt
++- README.md
 ```
 
-## 7. Dependencies
+## 6. Dependencies
 
-```
+- streamlit
+- pandas
+- numpy
+- openpyxl
 
-streamlit
-pandas
-numpy
-openpyxl
+## 7. Completion Criteria
 
-```
-
-## 8. MVP Completion Criteria
-
-The MVP is complete when the app can:
-
-- Load a file from `/data`
-- Read A1/B1 correctly
-- Analyze redress deltas
-- Produce:
-  - Distribution
-  - Cumulative curve
-  - Percentiles
-  - Recommendation text
-- Without any manual input from the user
-```
+- Can read all `.xlsx` in `/data`, parse Day 0, and required columns
+- Handles single and all-mailings modes with filters
+- Provides distributions, coverage charts, KPIs, and business-question sliders
+- Produces recommendation-ready summary without exposing personal data
