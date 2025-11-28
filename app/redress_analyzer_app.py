@@ -157,14 +157,11 @@ if not files:
     st.stop()
 
 st.sidebar.header("Mailings")
-file_labels = [f.name for f in files]
+file_labels = [f.stem for f in files]
 selected_label = st.sidebar.radio(
     "Select a mailing file (latest first)", options=file_labels, index=0
 )
 selected_file = files[file_labels.index(selected_label)]
-
-st.title("Redress Analyzer")
-st.markdown(f"### Selected file: `{selected_label}`")
 
 # ------------------------------------
 # Read metadata (official mailing date)
@@ -247,10 +244,6 @@ if after_count == 0:
     )
     st.stop()
 
-st.write(
-    f"Records parsed: **{before_count}** → valid redress dates: **{after_count}**"
-)
-
 df["delta_days"] = (df["redress_date"] - official_date).dt.days
 
 df_valid = df[df["delta_days"] >= 0].copy() if exclude_negative else df.copy()
@@ -262,7 +255,6 @@ if df_valid.empty:
     st.stop()
 
 total_valid = len(df_valid)
-st.write(f"Records used for analysis: **{total_valid}**")
 
 if total_valid < 30:
     st.warning(
