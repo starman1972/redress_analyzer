@@ -303,13 +303,15 @@ stats_df = pd.DataFrame(
 # ------------------------------------
 st.title("Redress Analyzer")
 
-top_info = st.columns([2, 1])
-with top_info[0]:
-    st.markdown(
-        f"**Official mailing date (Day 0):** `{official_date.date()}`"
-    )
-with top_info[1]:
-    st.caption(f"File: `{selected_label}`")
+info_cols = st.columns([1.4, 1, 0.9, 0.9])
+with info_cols[0]:
+    st.markdown(f"**Official mailing date (Day 0):** `{official_date.date()}`")
+with info_cols[1]:
+    st.markdown(f"**File:** `{selected_label}`")
+with info_cols[2]:
+    st.markdown(f"**Valid redress dates:** {after_count}")
+with info_cols[3]:
+    st.markdown(f"**Records used:** {total_valid}")
 
 st.subheader("Coverage at a glance")
 dist_df = compute_distribution(delta)
